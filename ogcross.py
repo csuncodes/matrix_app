@@ -12,6 +12,7 @@ from sklearn import (manifold, datasets, decomposition, ensemble,
                      discriminant_analysis, random_projection, neighbors)
 import dash_uploader as du
 import uuid
+from sklearn.decomposition import PCA
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -20,9 +21,15 @@ UPLOAD_FOLDER_ROOT = r"C:\tmp\Uploads"
 du.configure_upload(app, UPLOAD_FOLDER_ROOT)
 # make a sample data frame with 6 columns
 np.random.seed(0)
+
 df_iris = datasets.load_iris()
+df = df_iris.data
+df = pd.DataFrame(df)
 
-
+#pca = PCA()
+#pca.fit(df)
+#exp_var_cumul = np.cumsum(pca.explained_variance_ratio_)
+#x=range(1, exp_var_cumul.shape[0] + 1)
 app.layout = html.Div(
     [
 
@@ -103,8 +110,6 @@ app.layout = html.Div(
                                 {'label':'t-SNE','value':'TSNE'}],
                                 value='None'
                         ),
-                        dcc.Input(id="input1", type="text", placeholder="X Variable"),
-                        dcc.Input(id="input2", type="text", placeholder="Y Variable"),
                         html.Div(id='intermediate-value', style={'display': 'none'}),
                     ],
                     className="pretty_container four columns",
@@ -121,12 +126,21 @@ app.layout = html.Div(
                         ),
                     ],
                     id="right-column",
-                    className="seven columns",
+                    className="eight columns",
                     style={'margin':5}
                     ),
             ],
         ),
-
+         html.Div(
+                    [
+                        html.Div(
+                            [dcc.Graph(id='g3', config={'displayModeBar': False})],
+                            className="pretty_container",
+                        ),
+                    ],
+                    className="twelve columns",
+                    style={'margin':5}
+                    ),
         html.Div(
             [
                 html.Div(
@@ -135,20 +149,27 @@ app.layout = html.Div(
                     style={'margin':5}
                 ),
                 html.Div(
-                    [dcc.Graph(id='g3', config={'displayModeBar': False})],
+                    [dcc.Graph(id='g5', config={'displayModeBar': False})],
                     className="pretty_container five columns",
                     style={'margin':5}
                 ),
             ],
             className="row flex-display",
+            id='graph-output'
         ),
         html.Div(
             [
                 html.Div(
-                    [dcc.Graph(id='g4', config={'displayModeBar': False})],
+                    [dcc.Graph(id='scatter_matrix', config={'displayModeBar': False}),dcc.Input(id="n_comp1", type="number", placeholder="# of Components",min=0)],
                     className="pretty_container seven columns",
                     style={'margin':5}
-                )
+                ),
+                html.Div(
+                    [dcc.Graph(id='g6', config={'displayModeBar': False}),dcc.Input(id="input1", type="number", placeholder="X Variable",min=0),
+                    dcc.Input(id="input2", type="number", placeholder="Y Variable",min=0)],
+                    className="pretty_container five columns",
+                    style={'margin':5}
+                ),
 
             ],
             className="row flex-display",
@@ -160,10 +181,7 @@ app.layout = html.Div(
 
 
 #app.layout = html.Div([
-#    dcc.ConfirmDialog(
-#        id='confirm',
-#        message='Please input a valid X or Y variable column',
-#    ),
+
 #        html.Div(
 #            [
 #                du.Upload(
@@ -220,24 +238,21 @@ app.layout = html.Div(
 #    )
 #], className='row')
 
-#@app.callback(Output('confirm', 'displayed'),
-#              Input('dropdown', 'value'))
-#def display_confirm(value):
-#    if value == 'Danger!!':
-#        return True
-#    return False
 
-def get_figure(df, projections, x_col, y_col, selectedpoints, selectedpoints_local):
+def get_figure(df, projections):
+    print('SCATTER')
+    print(df)
+    #print(selectedpoints_local)
 
-    if selectedpoints_local and selectedpoints_local['range']:
-        ranges = selectedpoints_local['range']
-        selection_bounds = {'x0': ranges['x'][0], 'x1': ranges['x'][1],
-                            'y0': ranges['y'][0], 'y1': ranges['y'][1]}
+    #if selectedpoints_local and selectedpoints_local['range']:
+    #    ranges = selectedpoints_local['range']
 
-    else:
-        selection_bounds = {'x0': np.min(df[x_col]), 'x1': np.max(df[x_col]),
-                            'y0': np.min(df[y_col]), 'y1': np.max(df[y_col])}
-     #somethings wrong here
+    #    selection_bounds = {'x0': ranges['x'][0], 'x1': ranges['x'][1],
+    #                        'y0': ranges['y'][0], 'y1': ranges['y'][1]}
+    #else:
+
+    #    selection_bounds = {'x0': np.min(df), 'x1': np.max(df),
+    #                        'y0': np.min(df), 'y1': np.max(df)}
 
     # set which points are selected with the `selectedpoints` property
     # and style those points with the `selected` and `unselected`
@@ -245,46 +260,34 @@ def get_figure(df, projections, x_col, y_col, selectedpoints, selectedpoints_loc
     # https://medium.com/@plotlygraphs/notes-from-the-latest-plotly-js-release-b035a5b43e21
     # for an explanation
 
+    fig = px.scatter(projections,color_continuous_scale='sunsetdark',render_mode='webgl')
 
-    fig = px.scatter(
-        df
-    )
-    #x=0,y=1
-    #color=df.species, labels={'color': 'species'}
-    #fig = px.scatter(df, x=df[x_col], y=df[y_col], text=df.index)
-    #print("SCATTER POINTS")
-    #print(selectedpoints)
-    fig.update_traces(selectedpoints=selectedpoints,
-                      customdata=df.index,
-                      mode='markers+text', marker={'size': 5}, unselected={'marker': { 'opacity': 0.3 }, 'textfont': { 'color': 'rgba(0, 0, 0, 0)' }})
-    #print("UPDATE SCATTER TRACES")
-    fig.update_layout(autosize=True,margin=dict(l=30, r=30, b=20, t=40),hovermode="closest",plot_bgcolor="#F9F9F9",paper_bgcolor="#E9E9E9",legend=dict(font=dict(size=10), orientation="h"))
-    fig.update_yaxes(automargin=True)
-    fig.add_shape(dict({'type': 'rect',
-                        'line': { 'width': 1, 'dash': 'dot', 'color': 'darkgrey' }},
-                       **selection_bounds))
+
+
+    fig.update_layout(margin={'l': 20, 'r': 0, 'b': 15, 't': 5}, dragmode='select', hovermode=False)
+
+
+
     return fig
 
-def get_figure2(df, projections, x_col, y_col, selectedpoints, selectedpoints_local):
-
+def get_figure2(df, projections):
+    print("COMP")
+    print(df)
 
 
     # set which points are selected with the `selectedpoints` property
     # and style those points with the `selected` and `unselected`
     # attribute. see
     # https://medium.com/@plotlygraphs/notes-from-the-latest-plotly-js-release-b035a5b43e21
-    # for an explanation
-    print("HERE")
-    print(selectedpoints)
-    print(selectedpoints_local)
-    if selectedpoints_local != None:
-        fig = px.histogram(selectedpoints, x=df[x_col], y=df[y_col])
-    else:
-        fig = px.histogram(selectedpoints)
+    pca = PCA()
+    pca.fit(df)
+    exp_var_cumul = np.cumsum(pca.explained_variance_ratio_)
 
-    fig.update_traces(selectedpoints=selectedpoints,
-                      customdata=df.index)
-
+    fig = px.area(
+        x=range(1, exp_var_cumul.shape[0] + 1),
+        y=exp_var_cumul,
+        labels={"x": "# Components", "y": "Explained Variance"}
+        )
 
 
     #fig = px.histogram(selectedpoints)
@@ -300,38 +303,69 @@ def get_figure2(df, projections, x_col, y_col, selectedpoints, selectedpoints_lo
                        #**selection_bounds))
     return fig
 
-def get_figure3(df, projections, x_col, y_col, selectedpoints, selectedpoints_local):
+def get_figure3(df, projections):
+    print('MATRIX')
+    print(df)
     #df = df.loc[:, :'sepal_width']
     #df = df.corr('pearson')
     #print(df)
     #px.density_heatmap(selectedpoints)
-    a = np.expand_dims(selectedpoints, axis=0)
-    fig = px.imshow(a)
+    #a = np.expand_dims(selectedpoints, axis=0)
+    fig = px.imshow(df)
     fig.update_layout(autosize=True,margin=dict(l=30, r=30, b=20, t=40),hovermode="closest",plot_bgcolor="#F9F9F9",paper_bgcolor="#E9E9E9",legend=dict(font=dict(size=10), orientation="h"))
 
     return fig
 
 
-def get_figure4(df, projections, x_col, y_col, selectedpoints, selectedpoints_local):
-    #df = px.data.iris()
-    #X = df[['sepal_length', 'sepal_width', 'petal_length', 'petal_width']]
-    X = df.columns
-    pca = PCA(n_components=3)
-    components = pca.fit_transform(X)
+def get_figure4(n_components, upload):
+    print('3D')
+    print(df)
+    pca = PCA(n_components=n_components)
+    components = pca.fit_transform(upload)
 
     total_var = pca.explained_variance_ratio_.sum() * 100
 
     fig = px.scatter_3d(
-        components, x=0, y=1, z=2,
+        components, x=0, y=1, z=2,color=0,color_continuous_scale='sunsetdark',
         title=f'Total Explained Variance: {total_var:.2f}%',
         labels={'0': 'PC 1', '1': 'PC 2', '2': 'PC 3'}
         )
     fig.update_layout(autosize=True,margin=dict(l=30, r=30, b=20, t=40),hovermode="closest",plot_bgcolor="#F9F9F9",paper_bgcolor="#E9E9E9",legend=dict(font=dict(size=10), orientation="h"))
     return fig
 
-def get_figure5(df, projections, x_col, y_col, selectedpoints, selectedpoints_local):
+def get_figure5(df, projections, x_col, y_col):
+    print("HEATMAP")
+    print(df)
     fig = px.density_heatmap(df, x=x_col, y=y_col, marginal_x="histogram", marginal_y="histogram")
     fig.update_layout(autosize=True,margin=dict(l=30, r=30, b=20, t=40),hovermode="closest",plot_bgcolor="#F9F9F9",paper_bgcolor="#E9E9E9",legend=dict(font=dict(size=10), orientation="h"))
+    return fig
+
+
+
+
+def get_figure6(n_components,upload):
+    print("SCATTER MATRIX")
+    print(df)
+    if n_components is None:
+        n_components = 2
+    pca = PCA(n_components=n_components)
+    components = pca.fit_transform(upload)
+
+    var = pca.explained_variance_ratio_.sum() * 100
+
+    labels = {str(i): f"PC {i+1}"
+              for i in range(n_components)}
+    labels['color'] = 'Median Price'
+
+    fig = px.scatter_matrix(
+        components,
+        color=0,
+        dimensions=range(n_components),
+        labels=labels,
+        title=f'Total Explained Variance: {var:.2f}%')
+
+    fig.update_traces(diagonal_visible=False)
+
     return fig
 
 @du.callback(
@@ -341,74 +375,83 @@ def get_figure5(df, projections, x_col, y_col, selectedpoints, selectedpoints_lo
 def get_a_list(filenames):
     print(filenames)
     print(pd.read_csv(filenames[0]))
-    return html.Ul([html.Li(filenames)])
+    return filenames
+
+
+
 # this callback defines 3 figures
 # as a function of the intersection of their 3 selections
 @app.callback(
     [Output('scatter', 'figure'),
-     Output('g2', 'figure'),
+    Output('g5', 'figure'),
      Output('g3', 'figure'),
-     Output('g4', 'figure')],
+     Output('g6', 'figure'),
+     Output("scatter_matrix", "figure"),
+     Output("g2", "figure")],
     [Input('crossfilter-yaxis-column', 'value'),
-    Input('scatter', 'selectedData'),
-     Input('g2', 'selectedData'),
-     Input('g3', 'selectedData'),
-     Input('g4', 'selectedData'),
      Input("input1", 'value'),
-     Input("input2", 'value')]
+     Input("input2", 'value'),
+     Input('callback-output', 'children'),
+     Input("n_comp1", 'value')]
 )
-def callback(analysis,selection1, selection2, selection3, selection4,x_col,y_col):
+def callback(analysis,x_col,y_col,upload,n_comp):
     #features = df.loc[:, :'sepal_width']
+    print("BJL")
+    print(upload)
+    if upload is not None:
+        df = pd.read_csv(upload[0])
+        df = df.dropna()
+    else:
 
-    df = df_iris.data[:, :4]
-    df = pd.DataFrame(df)
-    print(len(df.columns))
+        df = df_iris.data
+        df = pd.DataFrame(df)
+
     n_neighbors = 30
-    print(analysis)
-    #if analysis == 'SVD' or analysis == 'PCA':
-    #    print("a")
-    #    projections = decomposition.TruncatedSVD(n_components=1).fit_transform(df)
-    #elif analysis == 'ISO':
-    #    print("b")
-    #    projections = manifold.Isomap(n_neighbors=n_neighbors, n_components=1
-    #                    ).fit_transform(df)
-    #elif analysis == 'LLE':
-    #    print("c")
-    #    clf = manifold.LocallyLinearEmbedding(n_neighbors=n_neighbors, n_components=1,
-    #                                  method='standard')
-    #    projections = clf.fit_transform(df)
-    #elif analysis == 'TSNE':
-    #    print('d')
-    #    tsne = TSNE(n_components=2, random_state=0)
-    #    projections = tsne.fit_transform(df)
-    #else:
-    projections = df
+
+    if analysis == 'SVD':
+        print("a")
+        projections = decomposition.TruncatedSVD(n_components=1).fit_transform(df)
+    elif analysis == 'PCA':
+        pca = PCA(n_components=3)
+        projections = pca.fit_transform(df)
+    elif analysis == 'ISO':
+        print("b")
+        projections = manifold.Isomap(n_neighbors=n_neighbors, n_components=1
+                        ).fit_transform(df)
+    elif analysis == 'LLE':
+        print("c")
+        clf = manifold.LocallyLinearEmbedding(n_neighbors=n_neighbors, n_components=1,
+                                      method='standard')
+        projections = clf.fit_transform(df)
+    elif analysis == 'TSNE':
+        print('d')
+        tsne = TSNE(n_components=2, random_state=0)
+        projections = tsne.fit_transform(df)
+    else:
+        projections = df
 
     selectedpoints = df.index
 
-    #for selected_data in [selection1, selection2, selection3, selection4]:
-        #if selected_data and selected_data['points']:
-        #    if 'pointNumbers' in selected_data['points'][0]:
+    #for selected_data in [selection1, selection2]:
+    #    if selected_data and selected_data['points']:
+    #        print(selected_data['points'])
+    #        if 'pointNumbers' in selected_data['points'][0]:
 
-        #        for p in selected_data['points']:
-        #            selectedpoints = np.intersect1d(selectedpoints,[p['pointNumbers']])
-        #    else:
-        #        selectedpoints = np.intersect1d(selectedpoints,
-        #            [p['customdata'] for p in selected_data['points']])
+    #            for p in selected_data['points']:
+    #                selectedpoints = np.intersect1d(selectedpoints,[p['pointNumbers']])
+    #        else:
+    #            selectedpoints = np.intersect1d(selectedpoints,
+    #               [p['pointNumber'] for p in selected_data['points']])
 
-    for selected_data in [selection1, selection2,selection3, selection4]:
-        print("1")
-        print(selection1)
-        print(selection2)
-        print(selection3)
-        print(selection4)
-        if selected_data and selected_data['points']:
-            print('2')
+    #for selected_data in [selection1, selection2,selection3, selection4]:
+    #    print("1")
+    #    if selected_data and selected_data['points']:
+    #        print('2')
             #print(selected_data['points'])
 
-            selectedpoints = np.intersect1d(selectedpoints,
-                [p['customdata'] for p in selected_data['points']])
-            print('3')
+    #        selectedpoints = np.intersect1d(selectedpoints,
+    #            [p['customdata'] for p in selected_data['points']])
+    #        print('3')
 
 
 
@@ -421,13 +464,18 @@ def callback(analysis,selection1, selection2, selection3, selection4,x_col,y_col
     if y_col == None:
         y_col = df.columns[1]
     #if x_col not in df.columns:
+    print(df)
+    print(x_col)
+    print(y_col)
 
 
 
-    return [get_figure(df, projections, x_col, y_col, selectedpoints, selection2),
-            get_figure2(df, projections, x_col, y_col, selectedpoints, selection1),
-            get_figure3(df, projections, x_col, y_col, selectedpoints, selection1),
-            get_figure5(df, projections, x_col, y_col, selectedpoints, selection1)]
+    return [get_figure(df, projections),
+            get_figure2(df, projections),
+            get_figure3(df, projections),
+            get_figure5(df, projections,x_col, y_col),
+            get_figure6(n_comp,df),
+            get_figure4(3, df)]
 
 
 if __name__ == '__main__':
