@@ -37,46 +37,22 @@ app.layout = html.Div(
 
         html.Div(
             [
-                html.Div(
-                    [
-                        html.Img(
-                            src=app.get_asset_url("dash-logo.png"),
-                            id="plotly-image",
-                            style={
-                                "height": "60px",
-                                "width": "auto",
-                                "margin-bottom": "25px",
-                            },
-                        )
-                    ],
-                    className="one-third column",
-                ),
-                html.Div(
-                    [
-                        html.Div(
-                            [
-                                html.H3(
-                                    "New York Oil and Gas",
-                                    style={"margin-bottom": "5px"},
-                                ),
-                                html.H5(
-                                    "Production Overview", style={"margin-top": "5px"}
-                                ),
-                            ]
-                        )
-                    ],
-                    className="one-half column",
-                    id="title",
-                ),
+                
+
                 html.Div(
                     [
                         html.A(
                             html.Button("Learn More", id="learn-more-button"),
-                            href="https://plot.ly/dash/pricing/",
+                            href="rajanlab.com",
                         )
                     ],
                     className="one-third column",
                     id="button",
+                    style={
+                        "height": "60px",
+                        "width": "auto",
+                        "margin-bottom": "25px",
+                    },
                 ),
             ],
             id="header",
@@ -85,10 +61,10 @@ app.layout = html.Div(
         ),
         html.Div(
             [
-                html.Div(style={'backgroundColor': "#E9E9E9",'margin':15}, children=
+                html.Div(style={'backgroundColor': "#d0d1ff",'margin':15}, children=
                     [
                         html.P(
-                            "Filter by construction date (or select range in histogram):",
+                            "Try your own data!",
                             className="control_label",
                         ),
 
@@ -100,16 +76,7 @@ app.layout = html.Div(
                                         ),
                                         html.Div(id='callback-output'),
 
-                         dcc.Dropdown(
-                                id='crossfilter-yaxis-column',
-                                options=[{'label':'None','value':'None'},
-                                {'label':'PCA','value':'PCA'},
-                                {'label':'SVD','value':'SVD'},
-                                {'label':'Isomap','value':'ISO'},
-                                {'label':'Local Linear Embeddings', 'value':'LLE'},
-                                {'label':'t-SNE','value':'TSNE'}],
-                                value='None'
-                        ),
+
                         html.Div(id='intermediate-value', style={'display': 'none'}),
                     ],
                     className="pretty_container four columns",
@@ -131,7 +98,7 @@ app.layout = html.Div(
                     ),
             ],
         ),
-         html.Div(
+        html.Div(
                     [
                         html.Div(
                             [dcc.Graph(id='g3', config={'displayModeBar': False})],
@@ -157,7 +124,7 @@ app.layout = html.Div(
             className="row flex-display",
             id='graph-output'
         ),
-        html.Div(
+         html.Div(
             [
                 html.Div(
                     [dcc.Graph(id='scatter_matrix', config={'displayModeBar': False}),dcc.Input(id="n_comp1", type="number", placeholder="# of Components",min=0)],
@@ -173,10 +140,11 @@ app.layout = html.Div(
 
             ],
             className="row flex-display",
-        ),
+        )
+
     ],
     id="mainContainer",
-    style={"display": "flex", "flex-direction": "column",'backgroundColor': "#ced4da"},
+    style={"display": "flex", "flex-direction": "column",'backgroundColor': "#d0d1ff"},
 )
 
 
@@ -239,9 +207,9 @@ app.layout = html.Div(
 #], className='row')
 
 
-def get_figure(df, projections):
+def get_figure( projections):
     print('SCATTER')
-    print(df)
+
     #print(selectedpoints_local)
 
     #if selectedpoints_local and selectedpoints_local['range']:
@@ -260,7 +228,7 @@ def get_figure(df, projections):
     # https://medium.com/@plotlygraphs/notes-from-the-latest-plotly-js-release-b035a5b43e21
     # for an explanation
 
-    fig = px.scatter(projections,color_continuous_scale='sunsetdark',render_mode='webgl')
+    fig = px.scatter(projections,color_continuous_scale='sunsetdark')
 
 
 
@@ -270,18 +238,17 @@ def get_figure(df, projections):
 
     return fig
 
-def get_figure2(df, projections):
+def get_figure2(explained_var):
     print("COMP")
-    print(df)
+
 
 
     # set which points are selected with the `selectedpoints` property
     # and style those points with the `selected` and `unselected`
     # attribute. see
     # https://medium.com/@plotlygraphs/notes-from-the-latest-plotly-js-release-b035a5b43e21
-    pca = PCA()
-    pca.fit(df)
-    exp_var_cumul = np.cumsum(pca.explained_variance_ratio_)
+
+    exp_var_cumul = np.cumsum(explained_var)
 
     fig = px.area(
         x=range(1, exp_var_cumul.shape[0] + 1),
@@ -303,7 +270,7 @@ def get_figure2(df, projections):
                        #**selection_bounds))
     return fig
 
-def get_figure3(df, projections):
+def get_figure3(df):
     print('MATRIX')
     print(df)
     #df = df.loc[:, :'sepal_width']
@@ -317,13 +284,9 @@ def get_figure3(df, projections):
     return fig
 
 
-def get_figure4(n_components, upload):
+def get_figure4(n_components, components,total_var):
     print('3D')
-    print(df)
-    pca = PCA(n_components=n_components)
-    components = pca.fit_transform(upload)
 
-    total_var = pca.explained_variance_ratio_.sum() * 100
 
     fig = px.scatter_3d(
         components, x=0, y=1, z=2,color=0,color_continuous_scale='sunsetdark',
@@ -333,7 +296,7 @@ def get_figure4(n_components, upload):
     fig.update_layout(autosize=True,margin=dict(l=30, r=30, b=20, t=40),hovermode="closest",plot_bgcolor="#F9F9F9",paper_bgcolor="#E9E9E9",legend=dict(font=dict(size=10), orientation="h"))
     return fig
 
-def get_figure5(df, projections, x_col, y_col):
+def get_figure5(df, x_col, y_col):
     print("HEATMAP")
     print(df)
     fig = px.density_heatmap(df, x=x_col, y=y_col, marginal_x="histogram", marginal_y="histogram")
@@ -343,15 +306,8 @@ def get_figure5(df, projections, x_col, y_col):
 
 
 
-def get_figure6(n_components,upload):
+def get_figure6(n_components,components,total_var):
     print("SCATTER MATRIX")
-    print(df)
-    if n_components is None:
-        n_components = 2
-    pca = PCA(n_components=n_components)
-    components = pca.fit_transform(upload)
-
-    var = pca.explained_variance_ratio_.sum() * 100
 
     labels = {str(i): f"PC {i+1}"
               for i in range(n_components)}
@@ -362,8 +318,7 @@ def get_figure6(n_components,upload):
         color=0,
         dimensions=range(n_components),
         labels=labels,
-        title=f'Total Explained Variance: {var:.2f}%')
-
+        title=f'Total Explained Variance: {total_var:.2f}%')
     fig.update_traces(diagonal_visible=False)
 
     return fig
@@ -384,17 +339,18 @@ def get_a_list(filenames):
 @app.callback(
     [Output('scatter', 'figure'),
     Output('g5', 'figure'),
-     Output('g3', 'figure'),
-     Output('g6', 'figure'),
-     Output("scatter_matrix", "figure"),
-     Output("g2", "figure")],
-    [Input('crossfilter-yaxis-column', 'value'),
-     Input("input1", 'value'),
+    Output('g3', 'figure'),
+    Output('g6', 'figure'),
+    Output('scatter_matrix', 'figure'),
+    Output("g2", "figure")],
+    [
+    Input("input1", 'value'),
      Input("input2", 'value'),
      Input('callback-output', 'children'),
-     Input("n_comp1", 'value')]
+     Input("n_comp1", 'value')
+    ]
 )
-def callback(analysis,x_col,y_col,upload,n_comp):
+def callback(x_col,y_col,upload,n_comp):
     #features = df.loc[:, :'sepal_width']
     print("BJL")
     print(upload)
@@ -408,30 +364,14 @@ def callback(analysis,x_col,y_col,upload,n_comp):
 
     n_neighbors = 30
 
-    if analysis == 'SVD':
-        print("a")
-        projections = decomposition.TruncatedSVD(n_components=1).fit_transform(df)
-    elif analysis == 'PCA':
-        pca = PCA(n_components=3)
-        projections = pca.fit_transform(df)
-    elif analysis == 'ISO':
-        print("b")
-        projections = manifold.Isomap(n_neighbors=n_neighbors, n_components=1
-                        ).fit_transform(df)
-    elif analysis == 'LLE':
-        print("c")
-        clf = manifold.LocallyLinearEmbedding(n_neighbors=n_neighbors, n_components=1,
-                                      method='standard')
-        projections = clf.fit_transform(df)
-    elif analysis == 'TSNE':
-        print('d')
-        tsne = TSNE(n_components=2, random_state=0)
-        projections = tsne.fit_transform(df)
-    else:
-        projections = df
+
+    projections = df
 
     selectedpoints = df.index
-
+    pca = PCA(n_components=3)
+    components = pca.fit_transform(df)
+    total_var = pca.explained_variance_ratio_.sum() * 100
+    explained_var = pca.explained_variance_ratio_
     #for selected_data in [selection1, selection2]:
     #    if selected_data and selected_data['points']:
     #        print(selected_data['points'])
@@ -454,28 +394,18 @@ def callback(analysis,x_col,y_col,upload,n_comp):
     #        print('3')
 
 
-
-
-
-    print("FUCK")
-    print(selectedpoints)
     if x_col == None:
         x_col = df.columns[0]
     if y_col == None:
         y_col = df.columns[1]
-    #if x_col not in df.columns:
-    print(df)
-    print(x_col)
-    print(y_col)
 
 
-
-    return [get_figure(df, projections),
-            get_figure2(df, projections),
-            get_figure3(df, projections),
-            get_figure5(df, projections,x_col, y_col),
-            get_figure6(n_comp,df),
-            get_figure4(3, df)]
+    return [get_figure(components),
+            get_figure2(explained_var),
+            get_figure3(df),
+            get_figure5(df, x_col, y_col),
+            get_figure6(3,components,total_var),
+            get_figure4(3, components,total_var)]
 
 
 if __name__ == '__main__':
